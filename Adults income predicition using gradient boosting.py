@@ -10,76 +10,39 @@ import matplotlib.pyplot as plt
 
 
 #Read data 
-data = pd.read_csv('./data/adult.csv')
+data = pd.read_csv("data.csv", encoding='latin-1') # I used encoding because it could not run directly
 
+
+print(data.head(10))
+print("number of rows is : ",data.count())
 
 # Data cleaning for model training
 
+# Drop unwanted columns
+# we will not use all Columns because it exist unecessary ones  
+
+data = data[
+    ['Order Date','Ship Date','Ship Mode','Segment','City', 'State','Country','Market','Region','Category','Sub-Category','Sales','Quantity','Discount','Profit','Shipping Cost','Order Priority'		
+]]
+
+print(data.head(10))
+
 # Remove unwanted columns
-# we will not use all column because not all of them looks relevent to our subject 
+# we will not use all rows  because we are interseted only in african market 
 
 
-data = data.drop(
-    ['fnlwgt', 'educational-num',
-       'relationship', 'race','native-country'
-       ]
-    ,axis=1)
+data = data[data.isin(['Africa']).any(axis=1)]
+print(data.head(10))
+print("number of rows is : ",data.count())
 
-# Remove rows which has empty value. it marked by '?'
-
-
-data = data[~data.isin(['?']).any(axis=1)]
-data.count()
 
 # # EDA
 # Understanding data
 # All columns exist in our data
 
-
 data.columns
-
-# Extract all features in data
-# Showing all non numerical feautures of data
-
-
-# Showing all non numerical values of data
-not_null_data = data[~data.isin(['?']).any(axis=1)] # Datarows which has ? are removed
-data_elements = {col : not_null_data[col].unique() for col in ['education','workclass','marital-status','occupation','gender']} # non numerical columns
-data_feat = pd.DataFrame(dict([(c, pd.Series(v)) for c, v in data_elements.items()]))
-data_feat
-
-# ## Corelation matrix
-
-
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Assuming 'data' is your DataFrame
-
-# Select only numerical features
-numerical_features = data.select_dtypes(include=np.number)
-
-# Calculate correlation matrix for numerical features
-corr_matrix = numerical_features.corr()
-
-# Create the correlation matrix plot
-plt.figure(figsize=(12, 10))
-plt.matshow(corr_matrix, cmap='coolwarm')
-plt.colorbar()
-
-# Set tick labels for numerical features (adjust based on your data)
-plt.xticks(range(len(corr_matrix.columns)), corr_matrix.columns, rotation=45)
-plt.yticks(range(len(corr_matrix.columns)), corr_matrix.columns)
-
-# Add title
-plt.title('Correlation Matrix (Numerical Features)')
-
-# Display the plot
-plt.show()
-
+"""
 # Age and income (Histogram)
-# 
-
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 6))
 
@@ -157,43 +120,36 @@ for container in ax.containers:
 plt.tight_layout()
 plt.show()
 
+"""
 # ## Work class and income (Pie)
+# Count the occurrences of each order priority
+order_count = data['Order Priority'].value_counts()
 
+# Create the pie chart
+plt.figure(figsize=(8, 8))
+plt.pie(order_count, labels=order_count.index,autopct='%1.1f%%', colors=['blue', 'yellow', 'red', 'green'])
+plt.title('Order Priority Distribution')
+plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
-# Group by work class and salary and count occurrences
+# Show the plot
+plt.show()
 
-big_sal = data[data['income'] == '>50K']
-big_sal = big_sal[big_sal['workclass'] != '?']
+# Group the data by 'Sub-Category' and calculate the sum of 'Profit' for each sub-category
+profit = data.groupby('Sub-Category')['Profit'].sum()
 
-sml_sal = data[data['income'] == '<=50K']
-sml_sal = sml_sal[sml_sal['workclass'] != '?']
+# Plot the bar chart
+plt.figure(figsize=(10, 6))
+profit.plot(kind='bar', color='skyblue')
 
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(16, 10))
+# Add a title and labels
+plt.title('Total Profit for Each Sub-Category', fontsize=14)
+plt.xlabel('Sub-Category', fontsize=12)
+plt.ylabel('Total Profit', fontsize=12)
 
-big_sal['workclass'].value_counts().plot(kind='pie',ax=axes[0],title='Number of People Earning more than $50K by Work Classes', autopct='%1.')
-axes[0].legend(loc='best')
-axes[0].plot()
-
-sml_sal['workclass'].value_counts().plot(kind='pie',ax=axes[1],title='Number of People Earning less than $50K by Work Classes', autopct='%1.')
-axes[1].legend(loc='best')
-axes[1].plot()
-
-
-
-# count numbers of which employees has more 50 k as salary and vice-versa
-data['income'].value_counts()
-
-#  As we see earlier the data is imbalanced 
-# > "<=50K" : 34611
-# 
-# > ">50K" : 11422
-# 
-#  This issue leads to a ***Biased*** model
-#  there is multiple ways to fix the issue by *RandomUnderSampler* function or *Class weight* function
-
-# Creating *gradient boosting* model with use of *RandomUnderSampler* as data balance solution  and *RFECV (Recursive feature elimination with cross-validation)* as feature extrator
-
-
+# Show the plot
+plt.tight_layout()
+plt.show()
+"""
 # import library
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.tree import DecisionTreeClassifier
@@ -380,3 +336,4 @@ import pickle
 file = open('model','wb')
 pickle.dump(best_model,file)
 file.close()
+"""
