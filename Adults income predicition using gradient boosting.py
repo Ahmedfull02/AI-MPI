@@ -1,17 +1,22 @@
-# Getting Data:
-# The data used in this project is from a dataset in this url : <a>https://www.kaggle.com/datasets/wenruliu/adult-income-dataset</a>
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, mean_squared_error, PredictionErrorDisplay
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 # Read data from file as a dataframe
-
 
 #Read data 
 data = pd.read_csv("data.csv", encoding='latin-1') # I used encoding because it could not run directly
-
 
 print(data.head(10))
 print("number of rows is : ",data.count())
@@ -22,106 +27,39 @@ print("number of rows is : ",data.count())
 # we will not use all Columns because it exist unecessary ones  
 
 data = data[
-    ['Order Date','Ship Date','Ship Mode','Segment','City', 'State','Country','Market','Region','Category','Sub-Category','Sales','Quantity','Discount','Profit','Shipping Cost','Order Priority'		
+    ['Order Date','Ship Date','Ship Mode','Segment','Country','Market','Region','Category','Sub-Category','Sales','Quantity','Profit','Shipping Cost','Order Priority'		
 ]]
 
 print(data.head(10))
 
-# Remove unwanted columns
+# Remove unwanted rows
 # we will not use all rows  because we are interseted only in african market 
-
 
 data = data[data.isin(['Africa']).any(axis=1)]
 print(data.head(10))
 print("number of rows is : ",data.count())
+print('\n\n\n')
+print(data.dtypes)
+
+import pandas as pd
+
+# Convert columns to datetime
+data['Order Date'] = pd.to_datetime(data['Order Date'],format="%d-%m-%Y")
+data['Ship Date'] = pd.to_datetime(data['Ship Date'],format="%d-%m-%Y")
+
+# Calculate difference
+data['Shipping days'] = data['Ship Date'] - data['Order Date'] 
+data['Shipping days'] = data['Shipping days'].astype('int64')
+
+data = data.drop(columns=['Order Date', 'Ship Date'])
+
+print(data)
 
 
-# # EDA
+# EDA
 # Understanding data
 # All columns exist in our data
 
-data.columns
-"""
-# Age and income (Histogram)
-
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 6))
-
-# Bigger than 50K
-big_sal = data[data['income']=='>50K']
-big_sal['age'].plot(kind='hist',ax=axes[0][0],label='Age histogram',bins=20,
-                      title='Age of employees which their salary bigger than 50K',
-                      color='red', edgecolor='black')
-
-axes[0][0].set_xlabel('age')
-axes[0][0].set_ylabel('count')
-axes[0][0].legend()
-for container in axes[0][0].containers:
-    axes[0][0].bar_label(container, label_type='edge')
-axes[0][0].plot()
-
-big_sal['age'].plot(kind='kde',ax=axes[1][0],label='Age KDE',
-                      color='red')
-axes[1][0].set_xlabel('Age')
-axes[1][0].set_ylabel('density')
-axes[1][0].plot()
-
-# lesser than 50K
-small_sal = not_null_data[not_null_data['income']=='<=50K']
-small_sal['age'].plot(kind='hist', ax=axes[0][1],label='Age histogram',bins=10,
-                      title='Age of employees which their salary smaller than 50K',
-                      color='blue')
-axes[0][1].set_xlabel('Age')
-axes[0][1].set_ylabel('Count')
-axes[0][1].legend()
-for container in axes[0][1].containers:
-    axes[0][1].bar_label(container, label_type='edge')
-axes[0][1].plot()
-
-small_sal['age'].plot(kind='kde',ax=axes[1][1],label='Age KDE',
-                      color='blue')
-axes[1][1].set_xlabel('Age')
-axes[1][1].set_ylabel('density')
-axes[1][1].plot()
-
-
-plt.tight_layout()
-plt.show()
-
-# ## Education per Income (Bar)
-#   
-
-
-# Education levels its ordered based on level of education
-educations = ['Preschool', '1st-4th','5th-6th',
-              '7th-8th', '9th', '10th',
-              '11th', '12th', 'HS-grad',
-              'Assoc-voc', 'Some-college', 'Assoc-acdm',
-               'Prof-school', 'Bachelors', 'Masters','Doctorate',
-                ]
-# Group by occupation and salary and count occurrences
-Education_counts = data.groupby(['education', 'income']).size().unstack(fill_value=0)
-
-# Plot the bar chart
-Education_counts['total'] = Education_counts.sum(axis=1)
-Education_counts_sorted = Education_counts.loc[educations].drop(columns='total')
-
-
-ax = Education_counts_sorted.plot(kind='bar', stacked=False, figsize=(10, 6), color=['blue', 'orange'])
-# Add labels and title
-plt.title('number of peoples Salaries based on jobs title')
-plt.xlabel('Occupation')
-plt.ylabel('Number')
-plt.xticks(ha='right')
-plt.legend(title='Salary')
-
-for container in ax.containers:
-    ax.bar_label(container, label_type='edge')
-# Show the plot
-plt.tight_layout()
-plt.show()
-
-"""
-# ## Work class and income (Pie)
 # Count the occurrences of each order priority
 order_count = data['Order Priority'].value_counts()
 
@@ -132,7 +70,7 @@ plt.title('Order Priority Distribution')
 plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
 # Show the plot
-plt.show()
+# plt.show()
 
 # Group the data by 'Sub-Category' and calculate the sum of 'Profit' for each sub-category
 profit = data.groupby('Sub-Category')['Profit'].sum()
@@ -148,47 +86,19 @@ plt.ylabel('Total Profit', fontsize=12)
 
 # Show the plot
 plt.tight_layout()
-plt.show()
-"""
-# import library
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_curve, RocCurveDisplay, auc, precision_recall_curve, PrecisionRecallDisplay
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-import matplotlib.pyplot as plt
-
-from sklearn.feature_selection import  RFECV
-
-
-# Apply random under sampler
-
+# plt.show()
 
 from collections import Counter
-X = data.drop(['income'],axis=1)
-y = data["income"]
-print(Counter(y))
-
-rus = RandomUnderSampler(random_state=40)
-X, y = rus.fit_resample(X,y)
-print(Counter(y))
-
+X = data.drop(['Shipping Cost'],axis=1)
+y = data['Shipping Cost']
 
 print(X.shape)
 print(y.shape)
 
-# Splitting data into train and test 
-
-
 # Split data into Train and validation set 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
 # Make Some **Transformation** into data 
-
 
 # Define categorical and numerical features
 categorical_features = X.select_dtypes(
@@ -200,140 +110,176 @@ numerical_features = X.select_dtypes(
 ).columns.tolist()
 
 # For numerical data we used **Scaler** and for categorical data it used **OnehotEncoder**
-
-
 preprocessor = ColumnTransformer(
    transformers=[
-       ("cat", OneHotEncoder(), categorical_features),
+       ("cat", OneHotEncoder(handle_unknown='ignore'), categorical_features),
        ("num", StandardScaler(), numerical_features),
    ]
 )
 
-#  Use RFECV as Feauture selector
+# Define the parameter grid for GradientBoostingRegressor
+# param_grid_GBooo = {
+#     'gradientboostingregressor__n_estimators': [4, 8, 16, 32],
+#     'gradientboostingregressor__learning_rate': [1, 0.5, 0.25, 0.1]
+# }
+
+"""
+First Model Gradient Boosting Regressor
+"""
+# Parameters for GBRsgressor
+
+param_grid_GB = {
+    "gradientboostingregressor__loss":["deviance"],
+    "gradientboostingregressor__learning_rate": [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
+    "gradientboostingregressor__min_samples_split": np.linspace(0.1, 0.5, 12),
+    "gradientboostingregressor__min_samples_leaf": np.linspace(0.1, 0.5, 12),
+    "gradientboostingregressor__max_depth":[3,5,8],
+    "gradientboostingregressor__max_features":["log2","sqrt"],
+    "gradientboostingregressor__criterion": ["friedman_mse",  "mae"],
+    "gradientboostingregressor__subsample":[0.5, 0.618, 0.8, 0.85, 0.9, 0.95, 1.0],
+    "gradientboostingregressor__n_estimators":[10]
+    }
 
 # *Pipeline* is a series of data processing steps. Instead of creating new instances of each element in our model, we can simply put all those tasks into one pipeline.
-
-
-pipeline = make_pipeline(preprocessor,
-                         RFECV(estimator=DecisionTreeClassifier(random_state=42), verbose=1, step=1, cv=5, scoring='accuracy'),# verbose : Show iteration 
-                         GradientBoostingClassifier(random_state=42),
-                         verbose=True,
-                         
+pipeline1 = make_pipeline(preprocessor,
+                         GradientBoostingRegressor(random_state=42),
+                         verbose=True   
                    )
-pipeline
-
-
 
 # Fit the model on the training data
 print('Fit the model')
-pipeline.fit(X_train, y_train)
+pipeline1.fit(X_train, y_train)
+y_pred = pipeline1.predict(X_test)
 
-# Predict on the test set
-y_pred = pipeline.predict(X_test)
+# Generate Gradient Boosting Regressor report
+MSE = mean_squared_error(y_test, y_pred) # measurement of the typical absolute discrepancies between a dataset's actual values and projected values.
+R2 = r2_score(y_test, y_pred) # measures the square root of the average discrepancies between a dataset's actual values and projected values
+MAE = mean_absolute_error(y_test, y_pred) # A statistical metric frequently used to assess the goodness of fit of a regression model is the R-squared (R2) score,
+RMSE = mean_squared_error(y_test, y_pred)
 
-# Predict Probability on the test set
-y_pred_prob = pipeline.predict_proba(X_test)[:, 1]
+print("Gradient Boosting Regressor Report:")
+print('MAE : ',MAE)
+print('MSE : ',MSE)
+print('R2 : ',R2)
+print('RMSE : ',RMSE)
 
-# Generate classification report
-report = classification_report(y_test, y_pred)
+gsGB = GridSearchCV(estimator=LinearRegression(),
+                    param_grid=param_grid_GB,
+                    cv=5,
+                    scoring='neg_mean_squared_error'
+                )
+gsGB.fit(X_train, y_train)
+best_model_GB = gsGB.best_estimator_
 
+y_pred = best_model_GB.predict(X_test)
 
+# Generate Gradient Boosting Regressor report
+MSE = mean_squared_error(y_test, y_pred) # measurement of the typical absolute discrepancies between a dataset's actual values and projected values.
+R2 = r2_score(y_test, y_pred) # measures the square root of the average discrepancies between a dataset's actual values and projected values
+MAE = mean_absolute_error(y_test, y_pred) # A statistical metric frequently used to assess the goodness of fit of a regression model is the R-squared (R2) score,
+RMSE = mean_squared_error(y_test, y_pred)
 
-# Define the parameter grid for Gradient Boosting Classifier
-param_grid = {
-    'gradientboostingclassifier__n_estimators': [50, 100, 200],
-    'gradientboostingclassifier__learning_rate': [0.1, 0.05, 0.01],
-    'gradientboostingclassifier__max_depth': [3, 5, 7]
+print("Gradient Boosting Regressor with GSCV Report:")
+print('MAE : ',MAE)
+print('MSE : ',MSE)
+print('R2 : ',R2)
+print('RMSE : ',RMSE)
+
+"""
+Second Model Linear Regression Regressor
+"""
+# Linear regression does not have hyperparamters
+
+# *Pipeline* is a series of data processing steps. Instead of creating new instances of each element in our model, we can simply put all those tasks into one pipeline.
+pipeline2 = make_pipeline(preprocessor,
+                         LinearRegression(),
+                         verbose=True   
+                   )
+
+# Fit the model on the training data
+print('Fit the model')
+pipeline2.fit(X_train, y_train)
+y_pred = pipeline2.predict(X_test)
+
+# Generate Linear Regression report
+MSE = mean_squared_error(y_test, y_pred) # measurement of the typical absolute discrepancies between a dataset's actual values and projected values.
+R2 = r2_score(y_test, y_pred) # measures the square root of the average discrepancies between a dataset's actual values and projected values
+MAE = mean_absolute_error(y_test, y_pred) # A statistical metric frequently used to assess the goodness of fit of a regression model is the R-squared (R2) score,
+RMSE = mean_squared_error(y_test, y_pred)
+
+print("Linear Regression Report:")
+print('MAE : ',MAE)
+print('MSE : ',MSE)
+print('R2 : ',R2)
+print('RMSE : ',RMSE)
+
+"""
+Third Model: KNN Regressor
+"""
+
+# Hyper parameter for KNN regressor
+parameters_KNN = {
+    'n_neighbors': (1,10, 1),
+    'leaf_size': (20,40,1),
+    'p': (1,2),
+    'weights': ('uniform', 'distance'),
+    'metric': ('minkowski', 'chebyshev'),
 }
 
+# *Pipeline* is a series of data processing steps. Instead of creating new instances of each element in our model, we can simply put all those tasks into one pipeline.
+pipeline3 = make_pipeline(preprocessor,
+                         KNeighborsRegressor(),
+                         verbose=True   
+                   )
+
+# Fit the model on the training data
+print('Fit the model')
+pipeline3.fit(X_train, y_train)
+y_pred = pipeline3.predict(X_test)
+
+# Generate Stochastic Gradient Descent Regression report
+MSE = mean_squared_error(y_test, y_pred) # measurement of the typical absolute discrepancies between a dataset's actual values and projected values.
+R2 = r2_score(y_test, y_pred) # measures the square root of the average discrepancies between a dataset's actual values and projected values
+MAE = mean_absolute_error(y_test, y_pred) # A statistical metric frequently used to assess the goodness of fit of a regression model is the R-squared (R2) score,
+RMSE = mean_squared_error(y_test, y_pred)
+
+print("KNNeighbors Regression Report:")
+print('MAE : ',MAE)
+print('MSE : ',MSE)
+print('R2 : ',R2)
+print('RMSE : ',RMSE)
 
 
-# Initialize GridSearchCV with the pipeline and parameter grid
-grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring='accuracy')
-grid_search
-# Fit the grid search on your data
-# X_train and y_train should be your training data
-grid_search.fit(X_train, y_train)
+# cm = confusion_matrix(y_true=y_test, y_pred=y_pred)
+# cm_show = ConfusionMatrixDisplay(confusion_matrix=cm)
+# cm_show.plot(cmap='Blues')
+# plt.title('Confusion matrix')
+# plt.show()
 
 
+# # Calculate True Positive Rate (TPR), False Positive Rate (FPR), and Thresholds:
+# fpr, tpr, thresholds = roc_curve(y_test, y_pred, pos_label='>50K')
 
-# Get the best parameters and model
-best_params = grid_search.best_params_
-best_model = grid_search.best_estimator_
+# roc_auc = auc(fpr, tpr)
+# # Calculate AUC Score:
+# display = RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
+#                           estimator_name='(ROC) Curve')
 
-best_params
-# best_model
-
-results_df = pd.DataFrame(grid_search.cv_results_)
-results_df[['mean_test_score','mean_fit_time','rank_test_score','params']].sort_values(by='rank_test_score',ascending=True)
-
-# ## Model results
-
-
-# Predict on the test set
-y_pred = best_model.predict(X_test)
-
-
-# Predict Probability on the test set
-y_pred_prob = best_model.predict_proba(X_test)[:, 1]
-
-# Generate classification report
-report = classification_report(y_test, y_pred)
-
-
-
-print("\nClassification Report:")
-print(report)
-
-
-
-# Predict on the test set
-y_pred = pipeline.predict(X_test)
-
-# Predict Probability on the test set
-y_pred_prob = pipeline.predict_proba(X_test)[:, 1]
-
-# Generate classification report
-report = classification_report(y_test, y_pred)
+# display.plot()
+# plt.legend(loc="lower right")
+# plt.plot([0, 1], [0, 1], 'k--')
+# plt.title('Roc Curve of Gradient boosting')
+# plt.show()
 
 
 
-print("\nClassification Report:")
-print(report)
+# precision, recall, _ = precision_recall_curve(y_true=y_test, y_score=y_pred,pos_label='>50K')
+# disp = PrecisionRecallDisplay(precision=precision, recall=recall)
+# disp.plot()
+# plt.show()
 
 
-
-cm = confusion_matrix(y_true=y_test, y_pred=y_pred)
-cm_show = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['>50K', '<=50K'])
-cm_show.plot(cmap='Blues')
-plt.title('Confusion matrix')
-plt.show()
-
-
-# Calculate True Positive Rate (TPR), False Positive Rate (FPR), and Thresholds:
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob, pos_label='>50K')
-
-roc_auc = auc(fpr, tpr)
-# Calculate AUC Score:
-display = RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
-                          estimator_name='(ROC) Curve')
-
-display.plot()
-plt.legend(loc="lower right")
-plt.plot([0, 1], [0, 1], 'k--')
-plt.title('Roc Curve of Gradient boosting')
-plt.show()
-
-
-
-precision, recall, _ = precision_recall_curve(y_true=y_test, y_score=y_pred_prob,pos_label='>50K')
-disp = PrecisionRecallDisplay(precision=precision, recall=recall)
-disp.plot()
-plt.show()
-
-
-import pickle
-file = open('model','wb')
-pickle.dump(best_model,file)
-file.close()
-"""
+# import pickle
+# file = open('model','wb')
+# pickle.dump(best_model,file)
+# file.close()
